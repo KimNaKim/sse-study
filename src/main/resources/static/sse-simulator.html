@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SSE 브랜치 1화면 채팅 시뮬레이터</title>
+    <title>SSE 채팅 1화면 시뮬레이터</title>
     <style>
         :root {
             --bg: #f3f5fb;
@@ -12,6 +12,7 @@
             --ink: #1f2847;
             --muted: #627098;
             --accent: #2f66ff;
+            --good: #198754;
         }
         * { box-sizing: border-box; }
         body {
@@ -20,7 +21,7 @@
             color: var(--ink);
             background: radial-gradient(circle at 15% 0%, #eaf0ff 0, #f3f5fb 40%, #fafbff 100%);
         }
-        .wrap { max-width: 1180px; margin: 0 auto; padding: 24px; }
+        .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
         h1 { margin: 0 0 8px; font-size: 28px; }
         .sub { color: var(--muted); margin-bottom: 14px; }
         .hint {
@@ -32,11 +33,55 @@
             margin-bottom: 14px;
             font-size: 13px;
         }
-        .layout {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
+        .metrics {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 6px 18px rgba(31, 40, 71, 0.06);
+            margin-bottom: 14px;
         }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            font-size: 13px;
+        }
+        .metric-item {
+            background: #f7f9ff;
+            border: 1px solid #e3e9fa;
+            border-radius: 8px;
+            padding: 8px;
+        }
+        .metric-item b { color: var(--good); }
+        .load {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+            align-items: end;
+        }
+        .load label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+        .load input, .load select, .load button {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 13px;
+            background: #fff;
+        }
+        .load button {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: #fff;
+            cursor: pointer;
+        }
+        .load button.secondary {
+            background: #fff;
+            color: var(--ink);
+            border-color: var(--line);
+        }
+        .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
         .card {
             background: var(--card);
             border: 1px solid var(--line);
@@ -44,19 +89,14 @@
             padding: 12px;
             box-shadow: 0 6px 18px rgba(31, 40, 71, 0.06);
         }
-        .title-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
+        .title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
         h2 { margin: 0; font-size: 18px; }
         .meta { color: var(--muted); font-size: 12px; }
         .messages {
             border: 1px dashed var(--line);
             border-radius: 10px;
-            min-height: 320px;
-            max-height: 380px;
+            min-height: 280px;
+            max-height: 340px;
             overflow: auto;
             background: #fcfdff;
             padding: 8px;
@@ -69,11 +109,8 @@
             word-break: break-word;
         }
         .msg:last-child { border-bottom: none; }
-        .composer {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 8px;
-        }
+        .msg small { color: var(--muted); margin-left: 6px; }
+        .composer { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
         input[type="text"] {
             border: 1px solid var(--line);
             border-radius: 8px;
@@ -81,7 +118,7 @@
             font-size: 14px;
             width: 100%;
         }
-        button {
+        .send-btn {
             border: 1px solid var(--accent);
             background: var(--accent);
             color: #fff;
@@ -96,20 +133,65 @@
             border-radius: 10px;
             padding: 10px 12px;
             font: 12px/1.45 Consolas, monospace;
-            max-height: 210px;
+            max-height: 230px;
             overflow: auto;
             white-space: pre-wrap;
         }
-        @media (max-width: 900px) {
+        @media (max-width: 980px) {
             .layout { grid-template-columns: 1fr; }
+            .metrics-grid { grid-template-columns: 1fr 1fr; }
+            .load { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
 <body>
 <div class="wrap">
     <h1>SSE 브랜치 1화면 채팅 시뮬레이터</h1>
-    <div class="sub">A/B를 한 화면에서 채팅 테스트할 수 있습니다. 메시지 수신은 SSE(EventSource)로 처리됩니다.</div>
-    <div class="hint">참고: 현재 서버 구현은 세션당 emitter 1개를 사용하므로, 이 페이지는 SSE 연결 1개를 공유해서 두 패널을 동시에 갱신합니다.</div>
+    <div class="sub">A/B가 한 화면에서 대화하고, SSE 실시간 푸시 방식 성능을 수치로 확인할 수 있습니다.</div>
+    <div class="hint">전송은 POST /chat, 수신은 EventSource(/connect) 1개 공유 연결입니다. 자동 부하로 push 방식 지연 특성을 확인하세요.</div>
+
+    <section class="metrics">
+        <div class="metrics-grid">
+            <div class="metric-item">POST 전송 수: <b id="m-post">0</b></div>
+            <div class="metric-item">SSE 수신 이벤트 수: <b id="m-events">0</b></div>
+            <div class="metric-item">수신 평균 지연: <b id="m-avg">-</b></div>
+            <div class="metric-item">수신 p95 지연: <b id="m-p95">-</b></div>
+            <div class="metric-item">SSE 데이터 바이트: <b id="m-bytes">0 B</b></div>
+            <div class="metric-item">초당 이벤트(EPS): <b id="m-eps">0.00</b></div>
+            <div class="metric-item">재연결 횟수: <b id="m-reconnect">0</b></div>
+            <div class="metric-item">자동 부하 상태: <b id="m-load">중지</b></div>
+        </div>
+
+        <div class="load">
+            <div>
+                <label for="load-user">발신자</label>
+                <select id="load-user">
+                    <option value="A">A 고정</option>
+                    <option value="B">B 고정</option>
+                    <option value="ALT" selected>A/B 번갈아</option>
+                    <option value="RND">랜덤</option>
+                </select>
+            </div>
+            <div>
+                <label for="load-interval">전송 간격(ms)</label>
+                <input id="load-interval" type="number" min="100" step="100" value="400">
+            </div>
+            <div>
+                <label for="load-size">메시지 길이(문자)</label>
+                <input id="load-size" type="number" min="5" max="4000" step="5" value="80">
+            </div>
+            <div>
+                <label for="load-prefix">메시지 접두사</label>
+                <input id="load-prefix" type="text" value="load-test">
+            </div>
+            <div>
+                <button id="load-start">부하 시작</button>
+            </div>
+            <div>
+                <button class="secondary" id="load-stop">부하 중지</button>
+            </div>
+        </div>
+    </section>
 
     <div class="layout">
         <section class="card">
@@ -120,7 +202,7 @@
             <div class="messages" id="messages-a"></div>
             <form class="composer" data-user="A">
                 <input type="text" name="msg" placeholder="A가 보낼 메시지">
-                <button type="submit">A 전송</button>
+                <button class="send-btn" type="submit">A 전송</button>
             </form>
         </section>
 
@@ -132,7 +214,7 @@
             <div class="messages" id="messages-b"></div>
             <form class="composer" data-user="B">
                 <input type="text" name="msg" placeholder="B가 보낼 메시지">
-                <button type="submit">B 전송</button>
+                <button class="send-btn" type="submit">B 전송</button>
             </form>
         </section>
     </div>
@@ -142,8 +224,20 @@
 
 <script>
     const logEl = document.getElementById("log");
+    const encoder = new TextEncoder();
     const messagesA = [];
     const messagesB = [];
+    const metrics = {
+        postCount: 0,
+        eventCount: 0,
+        bytes: 0,
+        latencies: [],
+        reconnects: 0,
+        startedAt: Date.now(),
+        autoLoad: false
+    };
+    let autoLoadTimer = null;
+    let altFlag = false;
 
     function log(message) {
         const time = new Date().toLocaleTimeString();
@@ -152,24 +246,83 @@
         logEl.prepend(line);
     }
 
+    function formatByteSize(size) {
+        if (size < 1024) return `${size} B`;
+        if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+        return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    function percentile(values, p) {
+        if (!values.length) return null;
+        const sorted = [...values].sort((a, b) => a - b);
+        const idx = Math.ceil((p / 100) * sorted.length) - 1;
+        return sorted[Math.max(0, idx)];
+    }
+
+    function parseTrackedMessage(text) {
+        const matched = text.match(/^\[([AB])]\|ts=(\d+)\|(.+)$/);
+        if (!matched) return { raw: text };
+        const sentAt = Number(matched[2]);
+        return {
+            sender: matched[1],
+            sentAt,
+            content: matched[3],
+            latency: Number.isFinite(sentAt) ? Date.now() - sentAt : null
+        };
+    }
+
+    function updateMetrics() {
+        const avg = metrics.latencies.length
+            ? Math.round(metrics.latencies.reduce((a, b) => a + b, 0) / metrics.latencies.length)
+            : null;
+        const p95 = percentile(metrics.latencies, 95);
+        const elapsedSec = Math.max(1, (Date.now() - metrics.startedAt) / 1000);
+        const eps = (metrics.eventCount / elapsedSec).toFixed(2);
+
+        document.getElementById("m-post").textContent = String(metrics.postCount);
+        document.getElementById("m-events").textContent = String(metrics.eventCount);
+        document.getElementById("m-avg").textContent = avg == null ? "-" : `${avg}ms`;
+        document.getElementById("m-p95").textContent = p95 == null ? "-" : `${p95}ms`;
+        document.getElementById("m-bytes").textContent = formatByteSize(metrics.bytes);
+        document.getElementById("m-eps").textContent = eps;
+        document.getElementById("m-reconnect").textContent = String(metrics.reconnects);
+        document.getElementById("m-load").textContent = metrics.autoLoad ? "실행 중" : "중지";
+    }
+
     function render(panelId, items) {
         const box = document.getElementById(`messages-${panelId}`);
-        if (items.length === 0) {
+        if (!items.length) {
             box.innerHTML = "<div class='msg'>메시지가 없습니다.</div>";
             return;
         }
-        box.innerHTML = items.slice(0, 60).map((text, idx) => {
-            return `<div class="msg">${idx + 1}. ${text}</div>`;
+        box.innerHTML = items.slice(0, 50).map((text, idx) => {
+            const parsed = parseTrackedMessage(text);
+            if (parsed.content) {
+                const latency = parsed.latency == null ? "-" : `${parsed.latency}ms`;
+                return `<div class="msg">${idx + 1}. [${parsed.sender}] ${parsed.content}<small>${latency}</small></div>`;
+            }
+            return `<div class="msg">${idx + 1}. ${parsed.raw}</div>`;
         }).join("");
     }
 
     function addMessage(text) {
+        const parsed = parseTrackedMessage(text);
+        if (parsed.latency != null && parsed.latency >= 0) {
+            metrics.latencies.push(parsed.latency);
+        }
+        if (metrics.latencies.length > 2000) {
+            metrics.latencies = metrics.latencies.slice(0, 2000);
+        }
+
         messagesA.unshift(text);
         messagesB.unshift(text);
         render("a", messagesA);
         render("b", messagesB);
-        document.getElementById("meta-a").textContent = `마지막 수신: ${new Date().toLocaleTimeString()} / 총 ${messagesA.length}개`;
-        document.getElementById("meta-b").textContent = `마지막 수신: ${new Date().toLocaleTimeString()} / 총 ${messagesB.length}개`;
+
+        const stamp = new Date().toLocaleTimeString();
+        document.getElementById("meta-a").textContent = `마지막 수신: ${stamp} / 총 ${messagesA.length}개`;
+        document.getElementById("meta-b").textContent = `마지막 수신: ${stamp} / 총 ${messagesB.length}개`;
+        updateMetrics();
     }
 
     async function bootstrapFromIndex() {
@@ -195,9 +348,13 @@
 
         source.addEventListener("connect", () => {
             log("SSE 연결 성공 (/connect)");
+            document.getElementById("meta-a").textContent = "상태: 연결됨";
+            document.getElementById("meta-b").textContent = "상태: 연결됨";
         });
 
         source.addEventListener("chat", (event) => {
+            metrics.eventCount += 1;
+            metrics.bytes += encoder.encode(event.data || "").length;
             try {
                 const body = JSON.parse(event.data);
                 const text = body.msg || "(빈 메시지)";
@@ -209,12 +366,14 @@
         });
 
         source.onerror = () => {
+            metrics.reconnects += 1;
+            updateMetrics();
             log("SSE 연결 오류 발생 (브라우저 자동 재연결 대기)");
         };
     }
 
     async function sendMessage(user, text) {
-        const payload = `[${user}] ${text}`;
+        const payload = `[${user}]|ts=${Date.now()}|${text}`;
         const body = `msg=${encodeURIComponent(payload)}`;
         try {
             await fetch("/chat", {
@@ -222,10 +381,53 @@
                 headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
                 body
             });
-            log(`${user}: POST /chat 전송 성공 -> ${payload}`);
+            metrics.postCount += 1;
+            updateMetrics();
+            log(`${user}: POST /chat 전송 (${text.length}자)`);
         } catch (e) {
             log(`${user}: 전송 실패 -> ${e.message}`);
         }
+    }
+
+    function pickLoadUser(mode) {
+        if (mode === "A" || mode === "B") return mode;
+        if (mode === "RND") return Math.random() > 0.5 ? "A" : "B";
+        altFlag = !altFlag;
+        return altFlag ? "A" : "B";
+    }
+
+    function makePayload(prefix, size) {
+        const base = `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+        if (base.length >= size) return base.slice(0, size);
+        return (base + "-").padEnd(size, "x");
+    }
+
+    function startAutoLoad() {
+        stopAutoLoad();
+        const mode = document.getElementById("load-user").value;
+        const interval = Number(document.getElementById("load-interval").value) || 400;
+        const size = Number(document.getElementById("load-size").value) || 80;
+        const prefix = document.getElementById("load-prefix").value.trim() || "load-test";
+
+        autoLoadTimer = setInterval(() => {
+            const user = pickLoadUser(mode);
+            const msg = makePayload(prefix, size);
+            sendMessage(user, msg);
+        }, Math.max(100, interval));
+
+        metrics.autoLoad = true;
+        updateMetrics();
+        log(`자동 부하 시작: mode=${mode}, interval=${interval}ms, size=${size}`);
+    }
+
+    function stopAutoLoad() {
+        if (autoLoadTimer) {
+            clearInterval(autoLoadTimer);
+            autoLoadTimer = null;
+        }
+        metrics.autoLoad = false;
+        updateMetrics();
+        log("자동 부하 중지");
     }
 
     document.querySelectorAll(".composer").forEach((form) => {
@@ -240,9 +442,14 @@
         });
     });
 
+    document.getElementById("load-start").addEventListener("click", startAutoLoad);
+    document.getElementById("load-stop").addEventListener("click", stopAutoLoad);
+    setInterval(updateMetrics, 1000);
+
     bootstrapFromIndex();
     connectSse();
-    log("시뮬레이터 시작: A/B 입력은 HTTP POST, 수신은 SSE 스트림으로 동작합니다.");
+    updateMetrics();
+    log("시뮬레이터 시작: SSE push + 성능 계측이 활성화되었습니다.");
 </script>
 </body>
 </html>
