@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SSE 브랜치 1화면 채팅 시뮬레이터</title>
+    <style>
+        :root {
+            --bg: #f3f5fb;
+            --card: #ffffff;
+            --line: #d6ddee;
+            --ink: #1f2847;
+            --muted: #627098;
+            --accent: #2f66ff;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: var(--ink);
+            background: radial-gradient(circle at 15% 0%, #eaf0ff 0, #f3f5fb 40%, #fafbff 100%);
+        }
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 24px; }
+        h1 { margin: 0 0 8px; font-size: 28px; }
+        .sub { color: var(--muted); margin-bottom: 14px; }
+        .hint {
+            background: #f8faff;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: var(--muted);
+            margin-bottom: 14px;
+            font-size: 13px;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 6px 18px rgba(31, 40, 71, 0.06);
+        }
+        .title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        h2 { margin: 0; font-size: 18px; }
+        .meta { color: var(--muted); font-size: 12px; }
+        .messages {
+            border: 1px dashed var(--line);
+            border-radius: 10px;
+            min-height: 320px;
+            max-height: 380px;
+            overflow: auto;
+            background: #fcfdff;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        .msg {
+            padding: 6px 7px;
+            border-bottom: 1px solid #edf1fb;
+            font-size: 13px;
+            word-break: break-word;
+        }
+        .msg:last-child { border-bottom: none; }
+        .composer {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+        }
+        input[type="text"] {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 14px;
+            width: 100%;
+        }
+        button {
+            border: 1px solid var(--accent);
+            background: var(--accent);
+            color: #fff;
+            border-radius: 8px;
+            padding: 9px 12px;
+            cursor: pointer;
+        }
+        .footer {
+            margin-top: 14px;
+            background: #101734;
+            color: #dce4ff;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font: 12px/1.45 Consolas, monospace;
+            max-height: 210px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>SSE 브랜치 1화면 채팅 시뮬레이터</h1>
+    <div class="sub">A/B를 한 화면에서 채팅 테스트할 수 있습니다. 메시지 수신은 SSE(EventSource)로 처리됩니다.</div>
+    <div class="hint">참고: 현재 서버 구현은 세션당 emitter 1개를 사용하므로, 이 페이지는 SSE 연결 1개를 공유해서 두 패널을 동시에 갱신합니다.</div>
+
+    <div class="layout">
+        <section class="card">
+            <div class="title-row">
+                <h2>사용자 A</h2>
+                <div class="meta" id="meta-a">상태: 대기</div>
+            </div>
+            <div class="messages" id="messages-a"></div>
+            <form class="composer" data-user="A">
+                <input type="text" name="msg" placeholder="A가 보낼 메시지">
+                <button type="submit">A 전송</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <div class="title-row">
+                <h2>사용자 B</h2>
+                <div class="meta" id="meta-b">상태: 대기</div>
+            </div>
+            <div class="messages" id="messages-b"></div>
+            <form class="composer" data-user="B">
+                <input type="text" name="msg" placeholder="B가 보낼 메시지">
+                <button type="submit">B 전송</button>
+            </form>
+        </section>
+    </div>
+
+    <div class="footer" id="log"></div>
+</div>
+
+<script>
+    const logEl = document.getElementById("log");
+    const messagesA = [];
+    const messagesB = [];
+
+    function log(message) {
+        const time = new Date().toLocaleTimeString();
+        const line = document.createElement("div");
+        line.textContent = `[${time}] ${message}`;
+        logEl.prepend(line);
+    }
+
+    function render(panelId, items) {
+        const box = document.getElementById(`messages-${panelId}`);
+        if (items.length === 0) {
+            box.innerHTML = "<div class='msg'>메시지가 없습니다.</div>";
+            return;
+        }
+        box.innerHTML = items.slice(0, 60).map((text, idx) => {
+            return `<div class="msg">${idx + 1}. ${text}</div>`;
+        }).join("");
+    }
+
+    function addMessage(text) {
+        messagesA.unshift(text);
+        messagesB.unshift(text);
+        render("a", messagesA);
+        render("b", messagesB);
+        document.getElementById("meta-a").textContent = `마지막 수신: ${new Date().toLocaleTimeString()} / 총 ${messagesA.length}개`;
+        document.getElementById("meta-b").textContent = `마지막 수신: ${new Date().toLocaleTimeString()} / 총 ${messagesB.length}개`;
+    }
+
+    async function bootstrapFromIndex() {
+        try {
+            const response = await fetch("/", { cache: "no-store" });
+            const html = await response.text();
+            const doc = new DOMParser().parseFromString(html, "text/html");
+            const texts = Array.from(doc.querySelectorAll("#chat-box li")).map((el) => el.textContent.trim());
+            texts.forEach((text) => {
+                messagesA.push(text);
+                messagesB.push(text);
+            });
+            render("a", messagesA);
+            render("b", messagesB);
+            log(`초기 목록 로드 완료: ${texts.length}개`);
+        } catch (e) {
+            log(`초기 목록 로드 실패: ${e.message}`);
+        }
+    }
+
+    function connectSse() {
+        const source = new EventSource("/connect");
+
+        source.addEventListener("connect", () => {
+            log("SSE 연결 성공 (/connect)");
+        });
+
+        source.addEventListener("chat", (event) => {
+            try {
+                const body = JSON.parse(event.data);
+                const text = body.msg || "(빈 메시지)";
+                addMessage(text);
+                log(`SSE chat 수신: ${text}`);
+            } catch (e) {
+                log(`SSE 메시지 파싱 실패: ${e.message}`);
+            }
+        });
+
+        source.onerror = () => {
+            log("SSE 연결 오류 발생 (브라우저 자동 재연결 대기)");
+        };
+    }
+
+    async function sendMessage(user, text) {
+        const payload = `[${user}] ${text}`;
+        const body = `msg=${encodeURIComponent(payload)}`;
+        try {
+            await fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+                body
+            });
+            log(`${user}: POST /chat 전송 성공 -> ${payload}`);
+        } catch (e) {
+            log(`${user}: 전송 실패 -> ${e.message}`);
+        }
+    }
+
+    document.querySelectorAll(".composer").forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const user = form.dataset.user;
+            const input = form.querySelector("input[name='msg']");
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = "";
+            await sendMessage(user, text);
+        });
+    });
+
+    bootstrapFromIndex();
+    connectSse();
+    log("시뮬레이터 시작: A/B 입력은 HTTP POST, 수신은 SSE 스트림으로 동작합니다.");
+</script>
+</body>
+</html>
