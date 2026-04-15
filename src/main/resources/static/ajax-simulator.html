@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AJAX 브랜치 1화면 채팅 시뮬레이터</title>
+    <style>
+        :root {
+            --bg: #f3f5fb;
+            --card: #ffffff;
+            --line: #d6ddee;
+            --ink: #1f2847;
+            --muted: #627098;
+            --accent: #2f66ff;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: var(--ink);
+            background: radial-gradient(circle at 15% 0%, #eaf0ff 0, #f3f5fb 40%, #fafbff 100%);
+        }
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 24px; }
+        h1 { margin: 0 0 8px; font-size: 28px; }
+        .sub { color: var(--muted); margin-bottom: 14px; }
+        .hint {
+            background: #f8faff;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: var(--muted);
+            margin-bottom: 14px;
+            font-size: 13px;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 6px 18px rgba(31, 40, 71, 0.06);
+        }
+        .title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        h2 { margin: 0; font-size: 18px; }
+        .meta { color: var(--muted); font-size: 12px; }
+        .messages {
+            border: 1px dashed var(--line);
+            border-radius: 10px;
+            min-height: 320px;
+            max-height: 380px;
+            overflow: auto;
+            background: #fcfdff;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        .msg {
+            padding: 6px 7px;
+            border-bottom: 1px solid #edf1fb;
+            font-size: 13px;
+            word-break: break-word;
+        }
+        .msg:last-child { border-bottom: none; }
+        .composer {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+        }
+        input[type="text"] {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 14px;
+            width: 100%;
+        }
+        button {
+            border: 1px solid var(--accent);
+            background: var(--accent);
+            color: #fff;
+            border-radius: 8px;
+            padding: 9px 12px;
+            cursor: pointer;
+        }
+        .footer {
+            margin-top: 14px;
+            background: #101734;
+            color: #dce4ff;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font: 12px/1.45 Consolas, monospace;
+            max-height: 210px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>AJAX 브랜치 1화면 채팅 시뮬레이터</h1>
+    <div class="sub">브라우저 창 하나에서 A/B가 채팅하고, 각 패널은 2초마다 /api로 목록을 갱신합니다.</div>
+    <div class="hint">동작 기준: 전송은 <b>POST /chat</b>, 수신은 <b>GET /api</b> 폴링(2초) 방식입니다.</div>
+
+    <div class="layout">
+        <section class="card">
+            <div class="title-row">
+                <h2>사용자 A</h2>
+                <div class="meta" id="meta-a">상태: 대기</div>
+            </div>
+            <div class="messages" id="messages-a"></div>
+            <form class="composer" data-user="A">
+                <input type="text" name="msg" placeholder="A가 보낼 메시지">
+                <button type="submit">A 전송</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <div class="title-row">
+                <h2>사용자 B</h2>
+                <div class="meta" id="meta-b">상태: 대기</div>
+            </div>
+            <div class="messages" id="messages-b"></div>
+            <form class="composer" data-user="B">
+                <input type="text" name="msg" placeholder="B가 보낼 메시지">
+                <button type="submit">B 전송</button>
+            </form>
+        </section>
+    </div>
+
+    <div class="footer" id="log"></div>
+</div>
+
+<script>
+    const logEl = document.getElementById("log");
+
+    function log(message) {
+        const time = new Date().toLocaleTimeString();
+        const line = document.createElement("div");
+        line.textContent = `[${time}] ${message}`;
+        logEl.prepend(line);
+    }
+
+    function render(panelId, items) {
+        const box = document.getElementById(`messages-${panelId}`);
+        if (!items.length) {
+            box.innerHTML = "<div class='msg'>메시지가 없습니다.</div>";
+            return;
+        }
+        box.innerHTML = items
+            .slice(0, 60)
+            .map((item, idx) => `<div class="msg">${idx + 1}. ${item.msg}</div>`)
+            .join("");
+    }
+
+    async function refreshPanel(panelId) {
+        try {
+            const response = await fetch("/api", { method: "GET", cache: "no-store" });
+            const items = await response.json();
+            render(panelId, items);
+            document.getElementById(`meta-${panelId}`).textContent = `마지막 갱신: ${new Date().toLocaleTimeString()} / 총 ${items.length}개`;
+            log(`${panelId.toUpperCase()} 패널: GET /api 완료 (${items.length}개)`);
+        } catch (e) {
+            log(`${panelId.toUpperCase()} 패널: /api 조회 실패 - ${e.message}`);
+        }
+    }
+
+    async function sendMessage(user, text) {
+        const payload = `[${user}] ${text}`;
+        const body = `msg=${encodeURIComponent(payload)}`;
+        try {
+            await fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+                body
+            });
+            log(`${user}: POST /chat 전송 성공 -> ${payload}`);
+            await Promise.all([refreshPanel("a"), refreshPanel("b")]);
+        } catch (e) {
+            log(`${user}: 전송 실패 - ${e.message}`);
+        }
+    }
+
+    document.querySelectorAll(".composer").forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const user = form.dataset.user;
+            const input = form.querySelector("input[name='msg']");
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = "";
+            await sendMessage(user, text);
+        });
+    });
+
+    setInterval(() => refreshPanel("a"), 2000);
+    setInterval(() => refreshPanel("b"), 2000);
+
+    refreshPanel("a");
+    refreshPanel("b");
+    log("시뮬레이터 시작: A/B 패널은 각자 2초마다 /api를 폴링합니다.");
+</script>
+</body>
+</html>
