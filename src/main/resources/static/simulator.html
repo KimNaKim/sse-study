@@ -21,7 +21,7 @@
             color: var(--ink);
             background: radial-gradient(circle at 15% 0%, #eaf0ff 0, #f3f5fb 40%, #fafbff 100%);
         }
-        .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        .wrap { max-width: 1240px; margin: 0 auto; padding: 24px; }
         h1 { margin: 0 0 8px; font-size: 28px; }
         .sub { color: var(--muted); margin-bottom: 14px; }
         .hint {
@@ -81,6 +81,36 @@
             color: var(--ink);
             border-color: var(--line);
         }
+        .flow-card {
+            position: relative;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 6px 18px rgba(31, 40, 71, 0.06);
+            margin-bottom: 14px;
+            min-height: 230px;
+        }
+        .flow-title { font-size: 13px; color: var(--muted); margin-bottom: 8px; font-weight: 700; }
+        #flowSvg { width: 100%; height: 180px; display: block; border-radius: 8px; background: #f9fbff; border: 1px dashed #d8e0f4; }
+        .banner {
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            background: rgba(20, 27, 56, 0.94);
+            color: #e8eeff;
+            border: 1px solid #2f4077;
+            border-radius: 10px;
+            padding: 10px 12px;
+            max-width: 360px;
+            font-size: 12px;
+            opacity: 0;
+            transform: translateY(-6px);
+            transition: opacity .2s ease, transform .2s ease;
+            pointer-events: none;
+        }
+        .banner.show { opacity: 1; transform: translateY(0); }
+        .banner b { display: block; color: #9bb8ff; margin-bottom: 4px; }
         .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
         .card {
             background: var(--card);
@@ -148,7 +178,7 @@
 <div class="wrap">
     <h1>Master 브랜치 1화면 채팅 시뮬레이터</h1>
     <div class="sub">A/B가 한 화면에서 대화하고, master 방식(2초 주기 GET / 전체 재조회) 성능을 수치로 확인할 수 있습니다.</div>
-    <div class="hint">지연 측정을 위해 전송 메시지에 내부 타임스탬프를 포함합니다. 자동 부하를 켜고 30~60초 돌려보면 폴링 특성이 더 잘 보입니다.</div>
+    <div class="hint">지연 측정을 위해 전송 메시지에 내부 타임스탬프를 포함합니다. 지표는 유지하고, 학습 직관성을 위해 단계 배너와 패킷 애니메이션을 추가했습니다.</div>
 
     <section class="metrics">
         <div class="metrics-grid">
@@ -161,7 +191,6 @@
             <div class="metric-item">최근 지연: <b id="m-last">-</b></div>
             <div class="metric-item">자동 부하 상태: <b id="m-load">중지</b></div>
         </div>
-
         <div class="load">
             <div>
                 <label for="load-user">발신자</label>
@@ -193,6 +222,37 @@
         </div>
     </section>
 
+    <section class="flow-card">
+        <div class="flow-title">실행 흐름 애니메이션: Client POST /chat → Server 저장 → 폴링 GET / → DOM 반영</div>
+        <svg id="flowSvg" viewBox="0 0 1000 220" preserveAspectRatio="none">
+            <defs>
+                <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                    <polygon points="0,0 10,4 0,8" fill="#9ab3f9"></polygon>
+                </marker>
+            </defs>
+            <line x1="190" y1="110" x2="500" y2="110" stroke="#c9d6fa" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+            <line x1="500" y1="110" x2="810" y2="70" stroke="#c9d6fa" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+            <line x1="500" y1="110" x2="810" y2="150" stroke="#c9d6fa" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+            <rect x="70" y="70" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/>
+            <text x="130" y="104" text-anchor="middle" font-size="14" fill="#2a3f78">Client</text>
+            <text x="130" y="124" text-anchor="middle" font-size="12" fill="#5b6f9d">A/B 입력</text>
+            <rect x="440" y="70" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/>
+            <text x="500" y="104" text-anchor="middle" font-size="14" fill="#2a3f78">Server</text>
+            <text x="500" y="124" text-anchor="middle" font-size="12" fill="#5b6f9d">Spring Boot</text>
+            <rect x="810" y="30" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/>
+            <text x="870" y="64" text-anchor="middle" font-size="14" fill="#2a3f78">Panel A</text>
+            <text x="870" y="84" text-anchor="middle" font-size="12" fill="#5b6f9d">GET /</text>
+            <rect x="810" y="110" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/>
+            <text x="870" y="144" text-anchor="middle" font-size="14" fill="#2a3f78">Panel B</text>
+            <text x="870" y="164" text-anchor="middle" font-size="12" fill="#5b6f9d">GET /</text>
+            <circle id="packetDot" cx="130" cy="110" r="8" fill="#2f66ff" opacity="0"></circle>
+        </svg>
+        <div id="stepBanner" class="banner">
+            <b id="bannerTitle">단계</b>
+            <div id="bannerBody">대기 중</div>
+        </div>
+    </section>
+
     <div class="layout">
         <section class="card">
             <div class="title-row">
@@ -205,7 +265,6 @@
                 <button class="send-btn" type="submit">A 전송</button>
             </form>
         </section>
-
         <section class="card">
             <div class="title-row">
                 <h2>사용자 B</h2>
@@ -225,6 +284,11 @@
 <script>
     const logEl = document.getElementById("log");
     const encoder = new TextEncoder();
+    const packetDot = document.getElementById("packetDot");
+    const banner = document.getElementById("stepBanner");
+    const bannerTitle = document.getElementById("bannerTitle");
+    const bannerBody = document.getElementById("bannerBody");
+
     const metrics = {
         postCount: 0,
         getCount: 0,
@@ -244,13 +308,48 @@
         logEl.prepend(line);
     }
 
+    function showStep(title, body, ms = 1200) {
+        bannerTitle.textContent = title;
+        bannerBody.textContent = body;
+        banner.classList.add("show");
+        setTimeout(() => banner.classList.remove("show"), ms);
+    }
+
+    function animatePacket(points, color = "#2f66ff", duration = 800) {
+        if (!points || points.length < 2) return;
+        packetDot.setAttribute("fill", color);
+        packetDot.setAttribute("opacity", "0.95");
+        const start = performance.now();
+        const segment = duration / (points.length - 1);
+
+        function tick(now) {
+            const elapsed = now - start;
+            if (elapsed >= duration) {
+                const last = points[points.length - 1];
+                packetDot.setAttribute("cx", String(last.x));
+                packetDot.setAttribute("cy", String(last.y));
+                setTimeout(() => packetDot.setAttribute("opacity", "0"), 120);
+                return;
+            }
+            const i = Math.floor(elapsed / segment);
+            const local = (elapsed - i * segment) / segment;
+            const p1 = points[i];
+            const p2 = points[i + 1];
+            const cx = p1.x + (p2.x - p1.x) * local;
+            const cy = p1.y + (p2.y - p1.y) * local;
+            packetDot.setAttribute("cx", String(cx));
+            packetDot.setAttribute("cy", String(cy));
+            requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    }
+
     function parseTrackedMessage(text) {
         const matched = text.match(/^\[([AB])]\|ts=(\d+)\|(.+)$/);
         if (!matched) return { raw: text };
         const sentAt = Number(matched[2]);
         return {
             sender: matched[1],
-            sentAt,
             content: matched[3],
             latency: Number.isFinite(sentAt) ? Date.now() - sentAt : null
         };
@@ -316,9 +415,7 @@
                 metrics.lastLatency = parsed.latency;
             }
         });
-        if (metrics.latencies.length > 2000) {
-            metrics.latencies = metrics.latencies.slice(0, 2000);
-        }
+        if (metrics.latencies.length > 2000) metrics.latencies = metrics.latencies.slice(0, 2000);
     }
 
     async function refreshPanel(panelId) {
@@ -332,6 +429,9 @@
             collectLatency(messages.slice(0, 5));
             document.getElementById(`meta-${panelId}`).textContent = `마지막 갱신: ${new Date().toLocaleTimeString()} / 총 ${messages.length}개`;
             updateMetrics();
+
+            showStep(`패널 ${panelId.toUpperCase()} 갱신`, "GET / 응답 수신 후 DOM 반영");
+            animatePacket([{ x: 500, y: 110 }, { x: 810, y: panelId === "a" ? 70 : 150 }], "#22a06b", 650);
         } catch (e) {
             log(`${panelId.toUpperCase()} 패널 목록 조회 실패 - ${e.message}`);
         }
@@ -341,6 +441,9 @@
         const payload = `[${user}]|ts=${Date.now()}|${text}`;
         const body = `msg=${encodeURIComponent(payload)}`;
         try {
+            showStep("1) Client 전송", `${user} 사용자가 POST /chat 호출`);
+            animatePacket([{ x: 130, y: 110 }, { x: 500, y: 110 }], "#2f66ff", 500);
+
             await fetch("/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
@@ -349,6 +452,8 @@
             metrics.postCount += 1;
             updateMetrics();
             log(`${user}: POST /chat 전송 (${text.length}자)`);
+
+            showStep("2) Server 저장", "chatService.save() 후 다음 폴링 때 반영");
         } catch (e) {
             log(`${user}: 전송 실패 - ${e.message}`);
         }
@@ -376,8 +481,7 @@
 
         autoLoadTimer = setInterval(() => {
             const user = pickLoadUser(mode);
-            const msg = makePayload(prefix, size);
-            sendMessage(user, msg);
+            sendMessage(user, makePayload(prefix, size));
         }, Math.max(100, interval));
 
         metrics.autoLoad = true;
@@ -386,10 +490,8 @@
     }
 
     function stopAutoLoad() {
-        if (autoLoadTimer) {
-            clearInterval(autoLoadTimer);
-            autoLoadTimer = null;
-        }
+        if (autoLoadTimer) clearInterval(autoLoadTimer);
+        autoLoadTimer = null;
         metrics.autoLoad = false;
         updateMetrics();
         log("자동 부하 중지");
@@ -417,7 +519,8 @@
     refreshPanel("a");
     refreshPanel("b");
     updateMetrics();
-    log("시뮬레이터 시작: master 폴링(2초) + 성능 계측이 활성화되었습니다.");
+    showStep("시뮬레이터 시작", "지표 + 애니메이션 모드 활성화", 1500);
+    log("시뮬레이터 시작: master 폴링(2초) + 성능 계측 + 시각 흐름 애니메이션");
 </script>
 </body>
 </html>
