@@ -1,462 +1,278 @@
 <!doctype html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>WebSocket 채팅 1화면 시뮬레이터</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
-    <style>
-        :root {
-            --bg: #f3f5fb;
-            --card: #ffffff;
-            --line: #d6ddee;
-            --ink: #1f2847;
-            --muted: #627098;
-            --accent: #2f66ff;
-            --good: #198754;
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: "Segoe UI", Arial, sans-serif;
-            color: var(--ink);
-            background: radial-gradient(circle at 15% 0%, #eaf0ff 0, #f3f5fb 40%, #fafbff 100%);
-        }
-        .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
-        h1 { margin: 0 0 8px; font-size: 28px; }
-        .sub { color: var(--muted); margin-bottom: 14px; }
-        .hint {
-            background: #f8faff;
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            padding: 10px 12px;
-            color: var(--muted);
-            margin-bottom: 14px;
-            font-size: 13px;
-        }
-        .metrics {
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 12px;
-            box-shadow: 0 6px 18px rgba(31, 40, 71, 0.06);
-            margin-bottom: 14px;
-        }
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 8px;
-            font-size: 13px;
-        }
-        .metric-item {
-            background: #f7f9ff;
-            border: 1px solid #e3e9fa;
-            border-radius: 8px;
-            padding: 8px;
-        }
-        .metric-item b { color: var(--good); }
-        .load {
-            display: grid;
-            grid-template-columns: repeat(6, minmax(0, 1fr));
-            gap: 8px;
-            margin-top: 10px;
-            align-items: end;
-        }
-        .load label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
-        .load input, .load select, .load button {
-            width: 100%;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            padding: 8px;
-            font-size: 13px;
-            background: #fff;
-        }
-        .load button {
-            border-color: var(--accent);
-            background: var(--accent);
-            color: #fff;
-            cursor: pointer;
-        }
-        .load button.secondary {
-            background: #fff;
-            color: var(--ink);
-            border-color: var(--line);
-        }
-        .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 12px;
-            box-shadow: 0 6px 18px rgba(31, 40, 71, 0.06);
-        }
-        .title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-        h2 { margin: 0; font-size: 18px; }
-        .meta { color: var(--muted); font-size: 12px; }
-        .messages {
-            border: 1px dashed var(--line);
-            border-radius: 10px;
-            min-height: 280px;
-            max-height: 340px;
-            overflow: auto;
-            background: #fcfdff;
-            padding: 8px;
-            margin-bottom: 10px;
-        }
-        .msg {
-            padding: 6px 7px;
-            border-bottom: 1px solid #edf1fb;
-            font-size: 13px;
-            word-break: break-word;
-        }
-        .msg:last-child { border-bottom: none; }
-        .msg small { color: var(--muted); margin-left: 6px; }
-        .composer { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-        input[type="text"] {
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            padding: 10px;
-            font-size: 14px;
-            width: 100%;
-        }
-        .send-btn {
-            border: 1px solid var(--accent);
-            background: var(--accent);
-            color: #fff;
-            border-radius: 8px;
-            padding: 9px 12px;
-            cursor: pointer;
-        }
-        .footer {
-            margin-top: 14px;
-            background: #101734;
-            color: #dce4ff;
-            border-radius: 10px;
-            padding: 10px 12px;
-            font: 12px/1.45 Consolas, monospace;
-            max-height: 230px;
-            overflow: auto;
-            white-space: pre-wrap;
-        }
-        @media (max-width: 980px) {
-            .layout { grid-template-columns: 1fr; }
-            .metrics-grid { grid-template-columns: 1fr 1fr; }
-            .load { grid-template-columns: 1fr 1fr; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WebSocket 채팅 시뮬레이터</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+  <style>
+    :root { --line:#d6ddee; --ink:#1f2847; --muted:#627098; --accent:#2f66ff; --good:#198754; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"Segoe UI", Arial, sans-serif; color:var(--ink); background:#f3f5fb; }
+    .wrap { max-width:1240px; margin:0 auto; padding:24px; }
+    h1 { margin:0 0 8px; font-size:28px; }
+    .sub, .hint { color:var(--muted); }
+    .hint { margin:10px 0 14px; border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#f8faff; font-size:13px; }
+    .metrics,.flow,.card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:14px; }
+    .grid4 { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; font-size:13px; }
+    .cell { background:#f7f9ff; border:1px solid #e3e9fa; border-radius:8px; padding:8px; }
+    .cell b { color:var(--good); }
+    .controls { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin-top:10px; }
+    label { font-size:12px; color:var(--muted); display:block; margin-bottom:4px; }
+    input,select,button { width:100%; border:1px solid var(--line); border-radius:8px; padding:8px; }
+    button { background:var(--accent); color:#fff; cursor:pointer; }
+    button.secondary { background:#fff; color:var(--ink); }
+    .flow { position:relative; }
+    #flowSvg { width:100%; height:180px; display:block; border:1px dashed #d8e0f4; border-radius:8px; background:#f9fbff; }
+    .banner { position:absolute; right:12px; top:12px; background:rgba(20,27,56,.94); color:#e8eeff; border:1px solid #2f4077; border-radius:10px; padding:10px 12px; opacity:0; transform:translateY(-6px); transition:.2s; max-width:390px; }
+    .banner.show { opacity:1; transform:translateY(0); }
+    .layout { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .title { display:flex; justify-content:space-between; margin-bottom:8px; }
+    .meta { color:var(--muted); font-size:12px; }
+    .messages { border:1px dashed var(--line); border-radius:10px; min-height:280px; max-height:340px; overflow:auto; background:#fcfdff; padding:8px; margin-bottom:10px; }
+    .msg { padding:6px 7px; border-bottom:1px solid #edf1fb; font-size:13px; }
+    .msg:last-child { border-bottom:none; }
+    .msg small { color:var(--muted); margin-left:6px; }
+    .composer { display:grid; grid-template-columns:1fr auto; gap:8px; }
+    .log { margin-top:14px; background:#101734; color:#dce4ff; border-radius:10px; padding:10px 12px; font:12px/1.45 Consolas, monospace; max-height:230px; overflow:auto; white-space:pre-wrap; }
+    @media (max-width:980px){ .layout,.grid4,.controls{grid-template-columns:1fr 1fr;} }
+  </style>
 </head>
 <body>
 <div class="wrap">
-    <h1>WebSocket 브랜치 1화면 채팅 시뮬레이터</h1>
-    <div class="sub">A/B가 한 화면에서 대화하고, WebSocket(STOMP) 실시간 푸시 성능을 수치로 확인할 수 있습니다.</div>
-    <div class="hint">전송은 POST /chat, 수신은 STOMP /sub/chat 구독입니다. 자동 부하로 이벤트 처리량과 지연 변화를 확인하세요.</div>
+  <h1>WebSocket 브랜치 1화면 채팅 시뮬레이터</h1>
+  <div class="sub">A/B가 한 화면에서 대화하고, WebSocket(STOMP) push 성능을 수치로 확인할 수 있습니다.</div>
+  <div class="hint">지표는 유지하고, 학습 직관성을 위해 단계 배너와 패킷 애니메이션을 추가했습니다.</div>
 
-    <section class="metrics">
-        <div class="metrics-grid">
-            <div class="metric-item">POST 전송 수: <b id="m-post">0</b></div>
-            <div class="metric-item">WS 수신 이벤트 수: <b id="m-events">0</b></div>
-            <div class="metric-item">수신 평균 지연: <b id="m-avg">-</b></div>
-            <div class="metric-item">수신 p95 지연: <b id="m-p95">-</b></div>
-            <div class="metric-item">WS 데이터 바이트: <b id="m-bytes">0 B</b></div>
-            <div class="metric-item">초당 이벤트(EPS): <b id="m-eps">0.00</b></div>
-            <div class="metric-item">재연결 횟수: <b id="m-reconnect">0</b></div>
-            <div class="metric-item">자동 부하 상태: <b id="m-load">중지</b></div>
-        </div>
-
-        <div class="load">
-            <div>
-                <label for="load-user">발신자</label>
-                <select id="load-user">
-                    <option value="A">A 고정</option>
-                    <option value="B">B 고정</option>
-                    <option value="ALT" selected>A/B 번갈아</option>
-                    <option value="RND">랜덤</option>
-                </select>
-            </div>
-            <div>
-                <label for="load-interval">전송 간격(ms)</label>
-                <input id="load-interval" type="number" min="100" step="100" value="400">
-            </div>
-            <div>
-                <label for="load-size">메시지 길이(문자)</label>
-                <input id="load-size" type="number" min="5" max="4000" step="5" value="80">
-            </div>
-            <div>
-                <label for="load-prefix">메시지 접두사</label>
-                <input id="load-prefix" type="text" value="load-test">
-            </div>
-            <div>
-                <button id="load-start">부하 시작</button>
-            </div>
-            <div>
-                <button class="secondary" id="load-stop">부하 중지</button>
-            </div>
-        </div>
-    </section>
-
-    <div class="layout">
-        <section class="card">
-            <div class="title-row">
-                <h2>사용자 A</h2>
-                <div class="meta" id="meta-a">상태: 대기</div>
-            </div>
-            <div class="messages" id="messages-a"></div>
-            <form class="composer" data-user="A">
-                <input type="text" name="msg" placeholder="A가 보낼 메시지">
-                <button class="send-btn" type="submit">A 전송</button>
-            </form>
-        </section>
-
-        <section class="card">
-            <div class="title-row">
-                <h2>사용자 B</h2>
-                <div class="meta" id="meta-b">상태: 대기</div>
-            </div>
-            <div class="messages" id="messages-b"></div>
-            <form class="composer" data-user="B">
-                <input type="text" name="msg" placeholder="B가 보낼 메시지">
-                <button class="send-btn" type="submit">B 전송</button>
-            </form>
-        </section>
+  <section class="metrics">
+    <div class="grid4">
+      <div class="cell">POST 전송 수: <b id="m-post">0</b></div>
+      <div class="cell">WS 수신 이벤트 수: <b id="m-events">0</b></div>
+      <div class="cell">평균 지연: <b id="m-avg">-</b></div>
+      <div class="cell">p95 지연: <b id="m-p95">-</b></div>
+      <div class="cell">WS 데이터 바이트: <b id="m-bytes">0 B</b></div>
+      <div class="cell">EPS: <b id="m-eps">0.00</b></div>
+      <div class="cell">재연결 횟수: <b id="m-reconnect">0</b></div>
+      <div class="cell">자동 부하: <b id="m-load">중지</b></div>
     </div>
+    <div class="controls">
+      <div><label for="load-user">발신자</label><select id="load-user"><option value="A">A</option><option value="B">B</option><option value="ALT" selected>번갈아</option><option value="RND">랜덤</option></select></div>
+      <div><label for="load-interval">간격(ms)</label><input id="load-interval" type="number" min="100" step="100" value="400"></div>
+      <div><label for="load-size">길이</label><input id="load-size" type="number" min="5" max="4000" step="5" value="80"></div>
+      <div><label for="load-prefix">접두사</label><input id="load-prefix" type="text" value="load-test"></div>
+      <div><label>&nbsp;</label><button id="load-start">부하 시작</button></div>
+      <div><label>&nbsp;</label><button class="secondary" id="load-stop">부하 중지</button></div>
+    </div>
+  </section>
 
-    <div class="footer" id="log"></div>
+  <section class="flow">
+    <svg id="flowSvg" viewBox="0 0 1000 220" preserveAspectRatio="none">
+      <defs><marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0,0 10,4 0,8" fill="#9ab3f9"></polygon></marker></defs>
+      <line x1="190" y1="110" x2="500" y2="110" stroke="#c9d6fa" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+      <line x1="500" y1="110" x2="810" y2="70" stroke="#c9d6fa" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+      <line x1="500" y1="110" x2="810" y2="150" stroke="#c9d6fa" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+      <rect x="70" y="70" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/><text x="130" y="104" text-anchor="middle" font-size="14" fill="#2a3f78">Client</text>
+      <rect x="440" y="70" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/><text x="500" y="104" text-anchor="middle" font-size="14" fill="#2a3f78">Server</text>
+      <rect x="810" y="30" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/><text x="870" y="64" text-anchor="middle" font-size="14" fill="#2a3f78">Panel A</text>
+      <rect x="810" y="110" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/><text x="870" y="144" text-anchor="middle" font-size="14" fill="#2a3f78">Panel B</text>
+      <g id="packetLayer"></g>
+    </svg>
+    <div id="stepBanner" class="banner"><b id="bannerTitle">단계</b><div id="bannerBody">대기 중</div></div>
+  </section>
+
+  <div class="layout">
+    <section class="card">
+      <div class="title"><h2>사용자 A</h2><div class="meta" id="meta-a">상태: 대기</div></div>
+      <div class="messages" id="messages-a"></div>
+      <form class="composer" data-user="A"><input type="text" name="msg" placeholder="A가 보낼 메시지"><button type="submit">A 전송</button></form>
+    </section>
+    <section class="card">
+      <div class="title"><h2>사용자 B</h2><div class="meta" id="meta-b">상태: 대기</div></div>
+      <div class="messages" id="messages-b"></div>
+      <form class="composer" data-user="B"><input type="text" name="msg" placeholder="B가 보낼 메시지"><button type="submit">B 전송</button></form>
+    </section>
+  </div>
+
+  <div class="log" id="log"></div>
 </div>
 
 <script>
-    const logEl = document.getElementById("log");
-    const encoder = new TextEncoder();
-    const messagesA = [];
-    const messagesB = [];
-    const metrics = {
-        postCount: 0,
-        eventCount: 0,
-        bytes: 0,
-        latencies: [],
-        reconnects: 0,
-        startedAt: Date.now(),
-        autoLoad: false
-    };
-    let autoLoadTimer = null;
-    let altFlag = false;
-    let stompClient = null;
+const logEl = document.getElementById("log");
+const encoder = new TextEncoder();
+const packetLayer = document.getElementById("packetLayer");
+const banner = document.getElementById("stepBanner");
+const bannerTitle = document.getElementById("bannerTitle");
+const bannerBody = document.getElementById("bannerBody");
 
-    function log(message) {
-        const time = new Date().toLocaleTimeString();
-        const line = document.createElement("div");
-        line.textContent = `[${time}] ${message}`;
-        logEl.prepend(line);
-    }
+const messagesA = [];
+const messagesB = [];
+const metrics = { postCount:0, eventCount:0, bytes:0, latencies:[], reconnects:0, startedAt:Date.now(), autoLoad:false };
+let autoLoadTimer = null;
+let altFlag = false;
+let stompClient = null;
 
-    function formatByteSize(size) {
-        if (size < 1024) return `${size} B`;
-        if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-        return `${(size / (1024 * 1024)).toFixed(2)} MB`;
-    }
+function log(m){ const t = new Date().toLocaleTimeString(); const d = document.createElement("div"); d.textContent = `[${t}] ${m}`; logEl.prepend(d); }
+function showStep(t,b,ms=1200){ bannerTitle.textContent=t; bannerBody.textContent=b; banner.classList.add("show"); setTimeout(()=>banner.classList.remove("show"),ms); }
 
-    function percentile(values, p) {
-        if (!values.length) return null;
-        const sorted = [...values].sort((a, b) => a - b);
-        const idx = Math.ceil((p / 100) * sorted.length) - 1;
-        return sorted[Math.max(0, idx)];
-    }
+function animatePacket(points, color="#2f66ff", duration=800){
+  if(!points || points.length < 2) return;
+  const dot = document.createElementNS("http://www.w3.org/2000/svg","circle");
+  dot.setAttribute("r","8"); dot.setAttribute("fill",color); dot.setAttribute("opacity","0.95");
+  packetLayer.appendChild(dot);
+  const start = performance.now(); const seg = duration / (points.length - 1);
+  function tick(now){
+    const elapsed = now - start;
+    if(elapsed >= duration){ const last = points[points.length-1]; dot.setAttribute("cx", last.x); dot.setAttribute("cy", last.y); dot.setAttribute("opacity","0.45"); setTimeout(()=>dot.remove(),180); return; }
+    const i = Math.floor(elapsed/seg); const local = (elapsed - i*seg)/seg; const p1 = points[i], p2 = points[i+1];
+    dot.setAttribute("cx", String(p1.x + (p2.x-p1.x)*local)); dot.setAttribute("cy", String(p1.y + (p2.y-p1.y)*local));
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
 
-    function parseTrackedMessage(text) {
-        const matched = text.match(/^\[([AB])]\|ts=(\d+)\|(.+)$/);
-        if (!matched) return { raw: text };
-        const sentAt = Number(matched[2]);
-        return {
-            sender: matched[1],
-            sentAt,
-            content: matched[3],
-            latency: Number.isFinite(sentAt) ? Date.now() - sentAt : null
-        };
-    }
+function parseTrackedMessage(text){
+  const m = text.match(/^\[([AB])]\|ts=(\d+)\|(.+)$/);
+  if(!m) return { raw:text };
+  const sentAt = Number(m[2]);
+  return { sender:m[1], content:m[3], latency:Number.isFinite(sentAt) ? Date.now() - sentAt : null };
+}
+function fmtBytes(v){ if(v<1024) return `${v} B`; if(v<1024*1024) return `${(v/1024).toFixed(1)} KB`; return `${(v/(1024*1024)).toFixed(2)} MB`; }
+function percentile(values,p){ if(!values.length) return null; const s=[...values].sort((a,b)=>a-b); const i=Math.ceil((p/100)*s.length)-1; return s[Math.max(0,i)]; }
 
-    function updateMetrics() {
-        const avg = metrics.latencies.length
-            ? Math.round(metrics.latencies.reduce((a, b) => a + b, 0) / metrics.latencies.length)
-            : null;
-        const p95 = percentile(metrics.latencies, 95);
-        const elapsedSec = Math.max(1, (Date.now() - metrics.startedAt) / 1000);
-        const eps = (metrics.eventCount / elapsedSec).toFixed(2);
+function updateMetrics(){
+  const avg = metrics.latencies.length ? Math.round(metrics.latencies.reduce((a,b)=>a+b,0)/metrics.latencies.length) : null;
+  const p95 = percentile(metrics.latencies,95);
+  const elapsed = Math.max(1,(Date.now()-metrics.startedAt)/1000);
+  document.getElementById("m-post").textContent = metrics.postCount;
+  document.getElementById("m-events").textContent = metrics.eventCount;
+  document.getElementById("m-avg").textContent = avg == null ? "-" : `${avg}ms`;
+  document.getElementById("m-p95").textContent = p95 == null ? "-" : `${p95}ms`;
+  document.getElementById("m-bytes").textContent = fmtBytes(metrics.bytes);
+  document.getElementById("m-eps").textContent = (metrics.eventCount/elapsed).toFixed(2);
+  document.getElementById("m-reconnect").textContent = metrics.reconnects;
+  document.getElementById("m-load").textContent = metrics.autoLoad ? "실행 중" : "중지";
+}
 
-        document.getElementById("m-post").textContent = String(metrics.postCount);
-        document.getElementById("m-events").textContent = String(metrics.eventCount);
-        document.getElementById("m-avg").textContent = avg == null ? "-" : `${avg}ms`;
-        document.getElementById("m-p95").textContent = p95 == null ? "-" : `${p95}ms`;
-        document.getElementById("m-bytes").textContent = formatByteSize(metrics.bytes);
-        document.getElementById("m-eps").textContent = eps;
-        document.getElementById("m-reconnect").textContent = String(metrics.reconnects);
-        document.getElementById("m-load").textContent = metrics.autoLoad ? "실행 중" : "중지";
-    }
+function render(panelId, items){
+  const box = document.getElementById(`messages-${panelId}`);
+  if(!items.length){ box.innerHTML = "<div class='msg'>메시지가 없습니다.</div>"; return; }
+  box.innerHTML = items.slice(0,50).map((text,idx)=>{
+    const p = parseTrackedMessage(text);
+    if(p.content){ const lat = p.latency == null ? "-" : `${p.latency}ms`; return `<div class="msg">${idx+1}. [${p.sender}] ${p.content}<small>${lat}</small></div>`; }
+    return `<div class="msg">${idx+1}. ${p.raw}</div>`;
+  }).join("");
+}
 
-    function render(panelId, items) {
-        const box = document.getElementById(`messages-${panelId}`);
-        if (!items.length) {
-            box.innerHTML = "<div class='msg'>메시지가 없습니다.</div>";
-            return;
-        }
-        box.innerHTML = items.slice(0, 50).map((text, idx) => {
-            const parsed = parseTrackedMessage(text);
-            if (parsed.content) {
-                const latency = parsed.latency == null ? "-" : `${parsed.latency}ms`;
-                return `<div class="msg">${idx + 1}. [${parsed.sender}] ${parsed.content}<small>${latency}</small></div>`;
-            }
-            return `<div class="msg">${idx + 1}. ${parsed.raw}</div>`;
-        }).join("");
-    }
+function addMessage(text){
+  const p = parseTrackedMessage(text);
+  if(p.latency != null && p.latency >= 0) metrics.latencies.push(p.latency);
+  if(metrics.latencies.length > 2000) metrics.latencies = metrics.latencies.slice(0,2000);
+  messagesA.unshift(text); messagesB.unshift(text);
+  render("a", messagesA); render("b", messagesB);
+  const stamp = new Date().toLocaleTimeString();
+  document.getElementById("meta-a").textContent = `마지막 수신: ${stamp} / 총 ${messagesA.length}개`;
+  document.getElementById("meta-b").textContent = `마지막 수신: ${stamp} / 총 ${messagesB.length}개`;
+  updateMetrics();
+}
 
-    function addMessage(text) {
-        const parsed = parseTrackedMessage(text);
-        if (parsed.latency != null && parsed.latency >= 0) {
-            metrics.latencies.push(parsed.latency);
-        }
-        if (metrics.latencies.length > 2000) {
-            metrics.latencies = metrics.latencies.slice(0, 2000);
-        }
+async function bootstrapFromIndex(){
+  try{
+    const response = await fetch("/", { cache:"no-store" });
+    const html = await response.text();
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const texts = Array.from(doc.querySelectorAll("#chat-box li")).map((el)=>el.textContent.trim());
+    texts.forEach((t)=>{ messagesA.push(t); messagesB.push(t); });
+    render("a", messagesA); render("b", messagesB);
+    log(`초기 목록 로드 완료: ${texts.length}개`);
+  } catch(e){
+    log(`초기 목록 로드 실패: ${e.message}`);
+  }
+}
 
-        messagesA.unshift(text);
-        messagesB.unshift(text);
-        render("a", messagesA);
-        render("b", messagesB);
-
-        const stamp = new Date().toLocaleTimeString();
-        document.getElementById("meta-a").textContent = `마지막 수신: ${stamp} / 총 ${messagesA.length}개`;
-        document.getElementById("meta-b").textContent = `마지막 수신: ${stamp} / 총 ${messagesB.length}개`;
-        updateMetrics();
-    }
-
-    async function bootstrapFromIndex() {
-        try {
-            const response = await fetch("/", { cache: "no-store" });
-            const html = await response.text();
-            const doc = new DOMParser().parseFromString(html, "text/html");
-            const texts = Array.from(doc.querySelectorAll("#chat-box li")).map((el) => el.textContent.trim());
-            texts.forEach((text) => {
-                messagesA.push(text);
-                messagesB.push(text);
-            });
-            render("a", messagesA);
-            render("b", messagesB);
-            log(`초기 목록 로드 완료: ${texts.length}개`);
-        } catch (e) {
-            log(`초기 목록 로드 실패: ${e.message}`);
-        }
-    }
-
-    function connectWebSocket() {
-        const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
-        const socketUrl = `${wsProtocol}://${location.host}/connect`;
-        const socket = new WebSocket(socketUrl);
-        stompClient = Stomp.over(socket);
-        stompClient.debug = null;
-
-        stompClient.connect({}, () => {
-            log("WebSocket(STOMP) 연결 성공");
-            document.getElementById("meta-a").textContent = "상태: 연결됨";
-            document.getElementById("meta-b").textContent = "상태: 연결됨";
-
-            stompClient.subscribe("/sub/chat", (frame) => {
-                metrics.eventCount += 1;
-                metrics.bytes += encoder.encode(frame.body || "").length;
-                try {
-                    const body = JSON.parse(frame.body);
-                    const text = body.msg || "(빈 메시지)";
-                    addMessage(text);
-                    log(`WS chat 수신: ${text}`);
-                } catch (e) {
-                    log(`WS 메시지 파싱 실패: ${e.message}`);
-                }
-            });
-        }, (error) => {
-            metrics.reconnects += 1;
-            updateMetrics();
-            document.getElementById("meta-a").textContent = "상태: 연결 실패";
-            document.getElementById("meta-b").textContent = "상태: 연결 실패";
-            log(`WebSocket 연결 실패: ${error}`);
-            setTimeout(connectWebSocket, 1500);
-        });
-    }
-
-    async function sendMessage(user, text) {
-        const payload = `[${user}]|ts=${Date.now()}|${text}`;
-        const body = `msg=${encodeURIComponent(payload)}`;
-        try {
-            await fetch("/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-                body
-            });
-            metrics.postCount += 1;
-            updateMetrics();
-            log(`${user}: POST /chat 전송 (${text.length}자)`);
-        } catch (e) {
-            log(`${user}: 전송 실패 -> ${e.message}`);
-        }
-    }
-
-    function pickLoadUser(mode) {
-        if (mode === "A" || mode === "B") return mode;
-        if (mode === "RND") return Math.random() > 0.5 ? "A" : "B";
-        altFlag = !altFlag;
-        return altFlag ? "A" : "B";
-    }
-
-    function makePayload(prefix, size) {
-        const base = `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
-        if (base.length >= size) return base.slice(0, size);
-        return (base + "-").padEnd(size, "x");
-    }
-
-    function startAutoLoad() {
-        stopAutoLoad();
-        const mode = document.getElementById("load-user").value;
-        const interval = Number(document.getElementById("load-interval").value) || 400;
-        const size = Number(document.getElementById("load-size").value) || 80;
-        const prefix = document.getElementById("load-prefix").value.trim() || "load-test";
-
-        autoLoadTimer = setInterval(() => {
-            const user = pickLoadUser(mode);
-            const msg = makePayload(prefix, size);
-            sendMessage(user, msg);
-        }, Math.max(100, interval));
-
-        metrics.autoLoad = true;
-        updateMetrics();
-        log(`자동 부하 시작: mode=${mode}, interval=${interval}ms, size=${size}`);
-    }
-
-    function stopAutoLoad() {
-        if (autoLoadTimer) {
-            clearInterval(autoLoadTimer);
-            autoLoadTimer = null;
-        }
-        metrics.autoLoad = false;
-        updateMetrics();
-        log("자동 부하 중지");
-    }
-
-    document.querySelectorAll(".composer").forEach((form) => {
-        form.addEventListener("submit", async (event) => {
-            event.preventDefault();
-            const user = form.dataset.user;
-            const input = form.querySelector("input[name='msg']");
-            const text = input.value.trim();
-            if (!text) return;
-            input.value = "";
-            await sendMessage(user, text);
-        });
+function connectWebSocket(){
+  const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
+  const socketUrl = `${wsProtocol}://${location.host}/connect`;
+  const socket = new WebSocket(socketUrl);
+  stompClient = Stomp.over(socket);
+  stompClient.debug = null;
+  stompClient.connect({}, () => {
+    log("WebSocket(STOMP) 연결 성공");
+    document.getElementById("meta-a").textContent = "상태: 연결됨";
+    document.getElementById("meta-b").textContent = "상태: 연결됨";
+    showStep("연결 완료", "STOMP /sub/chat 구독 시작");
+    stompClient.subscribe("/sub/chat", (frame) => {
+      metrics.eventCount += 1;
+      metrics.bytes += encoder.encode(frame.body || "").length;
+      try{
+        const body = JSON.parse(frame.body);
+        const text = body.msg || "(빈 메시지)";
+        addMessage(text);
+        log(`WS chat 수신: ${text}`);
+        showStep("3) WS Push 수신", "구독 이벤트 수신 후 DOM 반영");
+        animatePacket([{x:500,y:110},{x:810,y:70}], "#22a06b", 650);
+        setTimeout(()=>animatePacket([{x:500,y:110},{x:810,y:150}], "#22a06b", 650), 90);
+      } catch(e){
+        log(`WS 메시지 파싱 실패: ${e.message}`);
+      }
     });
+  }, (error) => {
+    metrics.reconnects += 1; updateMetrics();
+    document.getElementById("meta-a").textContent = "상태: 연결 실패";
+    document.getElementById("meta-b").textContent = "상태: 연결 실패";
+    log(`WebSocket 연결 실패: ${error}`);
+    showStep("재연결 시도", "WebSocket 연결 오류로 재연결 중");
+    setTimeout(connectWebSocket, 1500);
+  });
+}
 
-    document.getElementById("load-start").addEventListener("click", startAutoLoad);
-    document.getElementById("load-stop").addEventListener("click", stopAutoLoad);
-    setInterval(updateMetrics, 1000);
+async function sendMessage(user, text){
+  const payload = `[${user}]|ts=${Date.now()}|${text}`;
+  const body = `msg=${encodeURIComponent(payload)}`;
+  try{
+    showStep("1) Client 전송", `${user} 사용자가 POST /chat 호출`);
+    animatePacket([{x:130,y:110},{x:500,y:110}], "#2f66ff", 520);
+    await fetch("/chat", { method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" }, body });
+    metrics.postCount += 1; updateMetrics();
+    log(`${user}: POST /chat 전송 (${text.length}자)`);
+    showStep("2) Server fan-out", "convertAndSend('/sub/chat', chat) 수행");
+  } catch(e){
+    log(`${user}: 전송 실패 - ${e.message}`);
+  }
+}
 
-    bootstrapFromIndex();
-    connectWebSocket();
-    updateMetrics();
-    log("시뮬레이터 시작: WebSocket(STOMP) push + 성능 계측이 활성화되었습니다.");
+function pickLoadUser(mode){ if(mode==="A"||mode==="B") return mode; if(mode==="RND") return Math.random()>0.5?"A":"B"; altFlag=!altFlag; return altFlag?"A":"B"; }
+function makePayload(prefix,size){ const b=`${prefix}-${Math.random().toString(36).slice(2,10)}`; if(b.length>=size) return b.slice(0,size); return (b+"-").padEnd(size,"x"); }
+function startAutoLoad(){
+  stopAutoLoad();
+  const mode = document.getElementById("load-user").value;
+  const interval = Number(document.getElementById("load-interval").value) || 400;
+  const size = Number(document.getElementById("load-size").value) || 80;
+  const prefix = document.getElementById("load-prefix").value.trim() || "load-test";
+  autoLoadTimer = setInterval(()=>sendMessage(pickLoadUser(mode), makePayload(prefix,size)), Math.max(100, interval));
+  metrics.autoLoad = true; updateMetrics(); log(`자동 부하 시작: mode=${mode}, interval=${interval}ms, size=${size}`);
+}
+function stopAutoLoad(){ if(autoLoadTimer) clearInterval(autoLoadTimer); autoLoadTimer=null; metrics.autoLoad=false; updateMetrics(); log("자동 부하 중지"); }
+
+document.querySelectorAll(".composer").forEach((form)=>{
+  form.addEventListener("submit", async (event)=>{
+    event.preventDefault();
+    const user = form.dataset.user;
+    const input = form.querySelector("input[name='msg']");
+    const text = input.value.trim();
+    if(!text) return;
+    input.value = "";
+    await sendMessage(user, text);
+  });
+});
+document.getElementById("load-start").addEventListener("click", startAutoLoad);
+document.getElementById("load-stop").addEventListener("click", stopAutoLoad);
+setInterval(updateMetrics, 1000);
+
+bootstrapFromIndex();
+connectWebSocket();
+updateMetrics();
+showStep("시뮬레이터 시작", "지표 + 애니메이션 모드 활성화", 1500);
+log("시뮬레이터 시작: WebSocket(STOMP) push + 성능 계측 + 시각 흐름 애니메이션");
 </script>
 </body>
 </html>
