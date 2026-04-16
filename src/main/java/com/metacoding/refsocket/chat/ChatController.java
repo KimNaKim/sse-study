@@ -35,11 +35,11 @@ public class ChatController {
     }
 
     // /pub/room
-//    @MessageMapping("/room")
-//    public void pubTest1(String number){
-//        System.out.println("나 요청돼? : "+ number);
-//        sms.convertAndSend("/sub/"+number, "hello world "+number);
-//    }
+   @MessageMapping("/room")
+   public void pubTest1(String number){
+       System.out.println("나 요청돼? : "+ number);
+       sms.convertAndSend("/sub/"+number, "hello world "+number);
+   }
 
 //    @SendTo("/sub")
 //    @MessageMapping("/room")
