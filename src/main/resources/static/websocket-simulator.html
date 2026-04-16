@@ -23,9 +23,17 @@
     button { background:var(--accent); color:#fff; cursor:pointer; }
     button.secondary { background:#fff; color:var(--ink); }
     .flow { position:relative; }
-    #flowSvg { width:100%; height:180px; display:block; border:1px dashed #d8e0f4; border-radius:8px; background:#f9fbff; }
+    #flowSvg { width:100%; height:220px; display:block; border:1px dashed #d8e0f4; border-radius:8px; background:#f9fbff; }
     .banner { position:absolute; right:12px; top:12px; background:rgba(20,27,56,.94); color:#e8eeff; border:1px solid #2f4077; border-radius:10px; padding:10px 12px; opacity:0; transform:translateY(-6px); transition:.2s; max-width:390px; }
     .banner.show { opacity:1; transform:translateY(0); }
+    .broker-outline { fill:#fff2d9; stroke:#d9982e; stroke-width:2.2; }
+    .broker-label { fill:#7d4b00; font-weight:700; letter-spacing:.4px; }
+    .broker-halo { fill:none; stroke:#f6b048; stroke-width:4; opacity:0; }
+    .broker-halo.active { animation: brokerPulse .55s ease-out 1; }
+    @keyframes brokerPulse {
+      0% { opacity:.95; transform:scale(1); transform-origin:center; }
+      100% { opacity:0; transform:scale(1.18); transform-origin:center; }
+    }
     .layout { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     .title { display:flex; justify-content:space-between; margin-bottom:8px; }
     .meta { color:var(--muted); font-size:12px; }
@@ -66,15 +74,18 @@
   </section>
 
   <section class="flow">
-    <svg id="flowSvg" viewBox="0 0 1000 220" preserveAspectRatio="none">
+    <svg id="flowSvg" viewBox="0 0 1000 260" preserveAspectRatio="none">
       <defs><marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0,0 10,4 0,8" fill="#9ab3f9"></polygon></marker></defs>
-      <line x1="190" y1="110" x2="500" y2="110" stroke="#c9d6fa" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
-      <line x1="500" y1="110" x2="810" y2="70" stroke="#c9d6fa" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
-      <line x1="500" y1="110" x2="810" y2="150" stroke="#c9d6fa" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
-      <rect x="70" y="70" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/><text x="130" y="104" text-anchor="middle" font-size="14" fill="#2a3f78">Client</text>
-      <rect x="440" y="70" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/><text x="500" y="104" text-anchor="middle" font-size="14" fill="#2a3f78">Server</text>
-      <rect x="810" y="30" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/><text x="870" y="64" text-anchor="middle" font-size="14" fill="#2a3f78">Panel A</text>
-      <rect x="810" y="110" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/><text x="870" y="144" text-anchor="middle" font-size="14" fill="#2a3f78">Panel B</text>
+      <line x1="190" y1="150" x2="460" y2="150" stroke="#c9d6fa" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+      <line x1="540" y1="150" x2="680" y2="86" stroke="#e0c892" stroke-width="2.2" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+      <line x1="760" y1="86" x2="810" y2="66" stroke="#e0c892" stroke-width="2.2" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+      <line x1="760" y1="94" x2="810" y2="166" stroke="#e0c892" stroke-width="2.2" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+      <rect x="70" y="110" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/><text x="130" y="144" text-anchor="middle" font-size="14" fill="#2a3f78">Client</text>
+      <rect x="460" y="110" width="80" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/><text x="500" y="144" text-anchor="middle" font-size="14" fill="#2a3f78">Server</text>
+      <circle id="brokerHalo" class="broker-halo" cx="720" cy="90" r="34"></circle>
+      <rect x="680" y="52" width="80" height="76" rx="16" class="broker-outline"/><text x="720" y="86" text-anchor="middle" font-size="14" class="broker-label">BROKER</text><text x="720" y="105" text-anchor="middle" font-size="11" fill="#8b6a2f">/sub/chat</text>
+      <rect x="810" y="26" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/><text x="870" y="60" text-anchor="middle" font-size="14" fill="#2a3f78">Panel A</text>
+      <rect x="810" y="126" width="120" height="80" rx="12" fill="#eef3ff" stroke="#a6bdf7"/><text x="870" y="160" text-anchor="middle" font-size="14" fill="#2a3f78">Panel B</text>
       <g id="packetLayer"></g>
     </svg>
     <div id="stepBanner" class="banner"><b id="bannerTitle">단계</b><div id="bannerBody">대기 중</div></div>
@@ -100,6 +111,7 @@
 const logEl = document.getElementById("log");
 const encoder = new TextEncoder();
 const packetLayer = document.getElementById("packetLayer");
+const brokerHalo = document.getElementById("brokerHalo");
 const banner = document.getElementById("stepBanner");
 const bannerTitle = document.getElementById("bannerTitle");
 const bannerBody = document.getElementById("bannerBody");
@@ -113,6 +125,12 @@ let stompClient = null;
 
 function log(m){ const t = new Date().toLocaleTimeString(); const d = document.createElement("div"); d.textContent = `[${t}] ${m}`; logEl.prepend(d); }
 function showStep(t,b,ms=1200){ bannerTitle.textContent=t; bannerBody.textContent=b; banner.classList.add("show"); setTimeout(()=>banner.classList.remove("show"),ms); }
+function pulseBroker(){
+  if(!brokerHalo) return;
+  brokerHalo.classList.remove("active");
+  void brokerHalo.getBoundingClientRect();
+  brokerHalo.classList.add("active");
+}
 
 function animatePacket(points, color="#2f66ff", duration=800){
   if(!points || points.length < 2) return;
@@ -208,9 +226,13 @@ function connectWebSocket(){
         const text = body.msg || "(빈 메시지)";
         addMessage(text);
         log(`WS chat 수신: ${text}`);
-        showStep("3) WS Push 수신", "구독 이벤트 수신 후 DOM 반영");
-        animatePacket([{x:500,y:110},{x:810,y:70}], "#22a06b", 650);
-        setTimeout(()=>animatePacket([{x:500,y:110},{x:810,y:150}], "#22a06b", 650), 90);
+        showStep("3) WS Push 수신", "Server -> Broker fan-out -> A/B 수신");
+        animatePacket([{x:500,y:150},{x:720,y:90}], "#d9982e", 380);
+        setTimeout(() => {
+          pulseBroker();
+          animatePacket([{x:720,y:90},{x:870,y:66}], "#22a06b", 520);
+          animatePacket([{x:720,y:90},{x:870,y:166}], "#22a06b", 520);
+        }, 240);
       } catch(e){
         log(`WS 메시지 파싱 실패: ${e.message}`);
       }
@@ -230,7 +252,7 @@ async function sendMessage(user, text){
   const body = `msg=${encodeURIComponent(payload)}`;
   try{
     showStep("1) Client 전송", `${user} 사용자가 POST /chat 호출`);
-    animatePacket([{x:130,y:110},{x:500,y:110}], "#2f66ff", 520);
+    animatePacket([{x:130,y:150},{x:500,y:150}], "#2f66ff", 520);
     await fetch("/chat", { method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" }, body });
     metrics.postCount += 1; updateMetrics();
     log(`${user}: POST /chat 전송 (${text.length}자)`);
