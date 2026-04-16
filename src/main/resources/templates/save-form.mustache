@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 </head>
 <body>
 <div>
@@ -14,9 +15,44 @@
 </div>
 <h1>채팅 메시지 쓰기</h1>
 <hr>
-<form action="http://192.168.0.99:8080/chat" method="post">
-    <input type="text" name="msg">
-    <button type="submit">전송</button>
+<form id="send-form">
+    <input type="text" id="msg" name="msg" placeholder="메시지를 입력하세요">
+    <button type="submit">STOMP 직접 전송</button>
 </form>
+<p id="status">상태: 연결 중...</p>
+
+<script>
+    let stompClient = null;
+    const statusEl = document.getElementById("status");
+    const msgEl = document.getElementById("msg");
+
+    function connect() {
+        const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
+        const socket = new WebSocket(`${wsProtocol}://${location.host}/connect`);
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+
+        stompClient.connect({}, () => {
+            statusEl.textContent = "상태: 연결됨 (3단계 - Broker 직접 전송)";
+        }, () => {
+            statusEl.textContent = "상태: 연결 실패, 재시도 중...";
+            setTimeout(connect, 1200);
+        });
+    }
+
+    document.getElementById("send-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const msg = msgEl.value.trim();
+        if (!msg) return;
+        if (!stompClient || !stompClient.connected) {
+            statusEl.textContent = "상태: 아직 연결되지 않아 전송할 수 없습니다.";
+            return;
+        }
+        stompClient.send("/sub/chat", {}, JSON.stringify({ msg }));
+        msgEl.value = "";
+    });
+
+    connect();
+</script>
 </body>
 </html>

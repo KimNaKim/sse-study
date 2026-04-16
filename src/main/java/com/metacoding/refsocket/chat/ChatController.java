@@ -27,12 +27,12 @@ public class ChatController {
         return "index";
     }
 
-    @PostMapping("/chat")
-    public String save(String msg){
-        Chat chat = chatService.save(msg);
-        sms.convertAndSend("/sub/chat", chat);
-        return "redirect:/";
-    }
+//    @PostMapping("/chat")
+//    public String save(String msg){
+//        Chat chat = chatService.save(msg);
+//        sms.convertAndSend("/sub/chat", chat);
+//        return "redirect:/";
+//    }
 
 //    // /pub/room
 //   @MessageMapping("/room")

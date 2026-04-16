@@ -54,7 +54,7 @@
 
   <section class="metrics">
     <div class="grid4">
-      <div class="cell">POST 전송 수: <b id="m-post">0</b></div>
+      <div class="cell">STOMP SEND 수: <b id="m-post">0</b></div>
       <div class="cell">WS 수신 이벤트 수: <b id="m-events">0</b></div>
       <div class="cell">평균 지연: <b id="m-avg">-</b></div>
       <div class="cell">p95 지연: <b id="m-p95">-</b></div>
@@ -249,14 +249,17 @@ function connectWebSocket(){
 
 async function sendMessage(user, text){
   const payload = `[${user}]|ts=${Date.now()}|${text}`;
-  const body = `msg=${encodeURIComponent(payload)}`;
   try{
-    showStep("1) Client 전송", `${user} 사용자가 POST /chat 호출`);
+    if(!stompClient || !stompClient.connected){
+      log(`${user}: 전송 실패 - STOMP 미연결`);
+      return;
+    }
+    showStep("1) Client 전송", `${user} 사용자가 STOMP SEND(/sub/chat) 호출`);
     animatePacket([{x:130,y:150},{x:500,y:150}], "#2f66ff", 520);
-    await fetch("/chat", { method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" }, body });
+    stompClient.send("/sub/chat", {}, JSON.stringify({ msg: payload }));
     metrics.postCount += 1; updateMetrics();
-    log(`${user}: POST /chat 전송 (${text.length}자)`);
-    showStep("2) Server fan-out", "convertAndSend('/sub/chat', chat) 수행");
+    log(`${user}: STOMP SEND /sub/chat 전송 (${text.length}자)`);
+    showStep("2) Broker 수신", "Controller 스킵 후 Broker가 구독자에게 fan-out");
   } catch(e){
     log(`${user}: 전송 실패 - ${e.message}`);
   }
