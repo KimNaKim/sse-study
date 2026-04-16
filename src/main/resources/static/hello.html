@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+  </head>
+  <body>
+    <h1>출판자</h1>
+    <input type="text" id="msg" />
+    <button onclick="send()">메시지전송</button>
+    <hr />
+
+    <script>
+      // 1. 웹소켓 연결 세팅 및 연결 완료
+      let socket = new WebSocket("ws://192.168.0.99:8080/connect");
+      let stompClient = Stomp.over(socket);
+
+      stompClient.connect({}, (frame) => {
+        console.log("1. Connected");
+      });
+
+      function send() {
+        let msg = document.getElementById("msg").value;
+        stompClient.send("/spring/chat", {}, msg);
+      }
+    </script>
+  </body>
+</html>
