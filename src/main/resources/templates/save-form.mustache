@@ -33,7 +33,7 @@
         stompClient.debug = null;
 
         stompClient.connect({}, () => {
-            statusEl.textContent = "상태: 연결됨 (3단계 - Broker 직접 전송)";
+            statusEl.textContent = "상태: 연결됨 (4단계 - /pub -> @MessageMapping -> @SendTo)";
         }, () => {
             statusEl.textContent = "상태: 연결 실패, 재시도 중...";
             setTimeout(connect, 1200);
@@ -48,7 +48,7 @@
             statusEl.textContent = "상태: 아직 연결되지 않아 전송할 수 없습니다.";
             return;
         }
-        stompClient.send("/sub/chat", {}, JSON.stringify({ msg }));
+        stompClient.send("/pub/room", {}, JSON.stringify({ msg }));
         msgEl.value = "";
     });
 

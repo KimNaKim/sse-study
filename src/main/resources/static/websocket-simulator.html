@@ -254,12 +254,12 @@ async function sendMessage(user, text){
       log(`${user}: 전송 실패 - STOMP 미연결`);
       return;
     }
-    showStep("1) Client 전송", `${user} 사용자가 STOMP SEND(/sub/chat) 호출`);
+    showStep("1) Client 전송", `${user} 사용자가 STOMP SEND(/pub/room) 호출`);
     animatePacket([{x:130,y:150},{x:500,y:150}], "#2f66ff", 520);
-    stompClient.send("/sub/chat", {}, JSON.stringify({ msg: payload }));
+    stompClient.send("/pub/room", {}, JSON.stringify({ msg: payload }));
     metrics.postCount += 1; updateMetrics();
-    log(`${user}: STOMP SEND /sub/chat 전송 (${text.length}자)`);
-    showStep("2) Broker 수신", "Controller 스킵 후 Broker가 구독자에게 fan-out");
+    log(`${user}: STOMP SEND /pub/room 전송 (${text.length}자)`);
+    showStep("2) @MessageMapping 처리", "Controller에서 처리 후 @SendTo('/sub/chat')로 브로드캐스트");
   } catch(e){
     log(`${user}: 전송 실패 - ${e.message}`);
   }
