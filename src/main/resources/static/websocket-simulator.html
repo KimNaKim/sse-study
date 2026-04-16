@@ -17,7 +17,7 @@
     .grid4 { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; font-size:13px; }
     .cell { background:#f7f9ff; border:1px solid #e3e9fa; border-radius:8px; padding:8px; }
     .cell b { color:var(--good); }
-    .controls { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin-top:10px; }
+    .controls { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; margin-top:10px; }
     label { font-size:12px; color:var(--muted); display:block; margin-bottom:4px; }
     input,select,button { width:100%; border:1px solid var(--line); border-radius:8px; padding:8px; }
     button { background:var(--accent); color:#fff; cursor:pointer; }
@@ -67,6 +67,7 @@
       <div><label for="load-user">발신자</label><select id="load-user"><option value="A">A</option><option value="B">B</option><option value="ALT" selected>번갈아</option><option value="RND">랜덤</option></select></div>
       <div><label for="load-interval">간격(ms)</label><input id="load-interval" type="number" min="100" step="100" value="400"></div>
       <div><label for="load-size">길이</label><input id="load-size" type="number" min="5" max="4000" step="5" value="80"></div>
+      <div><label for="send-room">방(room)</label><select id="send-room"><option value="chat" selected>chat</option><option value="1">1</option><option value="2">2</option></select></div>
       <div><label for="load-prefix">접두사</label><input id="load-prefix" type="text" value="load-test"></div>
       <div><label>&nbsp;</label><button id="load-start">부하 시작</button></div>
       <div><label>&nbsp;</label><button class="secondary" id="load-stop">부하 중지</button></div>
@@ -217,13 +218,14 @@ function connectWebSocket(){
     log("WebSocket(STOMP) 연결 성공");
     document.getElementById("meta-a").textContent = "상태: 연결됨";
     document.getElementById("meta-b").textContent = "상태: 연결됨";
-    showStep("연결 완료", "STOMP /sub/chat 구독 시작");
-    stompClient.subscribe("/sub/chat", (frame) => {
+    showStep("연결 완료", "STOMP /sub/chat, /sub/1, /sub/2 구독 시작");
+    ["/sub/chat", "/sub/1", "/sub/2"].forEach((topic) => stompClient.subscribe(topic, (frame) => {
       metrics.eventCount += 1;
       metrics.bytes += encoder.encode(frame.body || "").length;
       try{
         const body = JSON.parse(frame.body);
-        const text = body.msg || "(빈 메시지)";
+        const room = body.room || "chat";
+        const text = `[room:${room}] ${body.msg || "(빈 메시지)"}`;
         addMessage(text);
         log(`WS chat 수신: ${text}`);
         showStep("3) WS Push 수신", "Server -> Broker fan-out -> A/B 수신");
@@ -236,7 +238,7 @@ function connectWebSocket(){
       } catch(e){
         log(`WS 메시지 파싱 실패: ${e.message}`);
       }
-    });
+    }));
   }, (error) => {
     metrics.reconnects += 1; updateMetrics();
     document.getElementById("meta-a").textContent = "상태: 연결 실패";
@@ -248,18 +250,19 @@ function connectWebSocket(){
 }
 
 async function sendMessage(user, text){
+  const room = document.getElementById("send-room").value || "chat";
   const payload = `[${user}]|ts=${Date.now()}|${text}`;
   try{
     if(!stompClient || !stompClient.connected){
       log(`${user}: 전송 실패 - STOMP 미연결`);
       return;
     }
-    showStep("1) Client 전송", `${user} 사용자가 STOMP SEND(/pub/room) 호출`);
+    showStep("1) Client 전송", `${user} 사용자가 STOMP SEND(/pub/room) 호출 (room=${room})`);
     animatePacket([{x:130,y:150},{x:500,y:150}], "#2f66ff", 520);
-    stompClient.send("/pub/room", {}, JSON.stringify({ msg: payload }));
+    stompClient.send("/pub/room", {}, JSON.stringify({ room, msg: payload }));
     metrics.postCount += 1; updateMetrics();
-    log(`${user}: STOMP SEND /pub/room 전송 (${text.length}자)`);
-    showStep("2) @MessageMapping 처리", "Controller에서 처리 후 @SendTo('/sub/chat')로 브로드캐스트");
+    log(`${user}: STOMP SEND /pub/room 전송 (room=${room}, ${text.length}자)`);
+    showStep("2) convertAndSend 처리", `Controller에서 convertAndSend('/sub/${room}') 수행`);
   } catch(e){
     log(`${user}: 전송 실패 - ${e.message}`);
   }

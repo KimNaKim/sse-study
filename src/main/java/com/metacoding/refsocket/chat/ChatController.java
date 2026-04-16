@@ -2,7 +2,7 @@ package com.metacoding.refsocket.chat;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class ChatController {
     private final ChatService chatService;
+    private final SimpMessageSendingOperations sms;
 
     @GetMapping("/save-form")
     public String saveForm(){
@@ -30,11 +31,13 @@ public class ChatController {
 //        return "redirect:/";
 //    }
 
-    // 4단계: /pub/room -> @MessageMapping -> @SendTo("/sub/chat")
-    @SendTo("/sub/chat")
+    // 5단계: /pub/room -> @MessageMapping -> convertAndSend("/sub/{room}")
     @MessageMapping("/room")
-    public ChatMessage pubTest2(ChatMessage message){
-        return message;
+    public void pubTest2(ChatMessage message){
+        String room = message == null || message.getRoom() == null || message.getRoom().isBlank()
+                ? "chat"
+                : message.getRoom().trim();
+        sms.convertAndSend("/sub/" + room, message);
     }
 
 

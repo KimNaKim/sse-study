@@ -8,5 +8,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ChatMessage {
+    private String room;
     private String msg;
 }

@@ -16,6 +16,11 @@
 <h1>채팅 메시지 쓰기</h1>
 <hr>
 <form id="send-form">
+    <select id="room" name="room">
+        <option value="chat" selected>room = chat</option>
+        <option value="1">room = 1</option>
+        <option value="2">room = 2</option>
+    </select>
     <input type="text" id="msg" name="msg" placeholder="메시지를 입력하세요">
     <button type="submit">STOMP 직접 전송</button>
 </form>
@@ -24,6 +29,7 @@
 <script>
     let stompClient = null;
     const statusEl = document.getElementById("status");
+    const roomEl = document.getElementById("room");
     const msgEl = document.getElementById("msg");
 
     function connect() {
@@ -33,7 +39,7 @@
         stompClient.debug = null;
 
         stompClient.connect({}, () => {
-            statusEl.textContent = "상태: 연결됨 (4단계 - /pub -> @MessageMapping -> @SendTo)";
+            statusEl.textContent = "상태: 연결됨 (5단계 - /pub -> @MessageMapping -> convertAndSend('/sub/{room}'))";
         }, () => {
             statusEl.textContent = "상태: 연결 실패, 재시도 중...";
             setTimeout(connect, 1200);
@@ -43,12 +49,13 @@
     document.getElementById("send-form").addEventListener("submit", (event) => {
         event.preventDefault();
         const msg = msgEl.value.trim();
+        const room = roomEl.value;
         if (!msg) return;
         if (!stompClient || !stompClient.connected) {
             statusEl.textContent = "상태: 아직 연결되지 않아 전송할 수 없습니다.";
             return;
         }
-        stompClient.send("/pub/room", {}, JSON.stringify({ msg }));
+        stompClient.send("/pub/room", {}, JSON.stringify({ room, msg }));
         msgEl.value = "";
     });
 
